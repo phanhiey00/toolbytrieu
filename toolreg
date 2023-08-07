@@ -1,0 +1,110 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import random
+import re
+import datetime
+import time
+import string
+from colorama import Fore,Style
+from os import system
+# In4 card
+card_number = '4280670024085410'
+exp_month = '10'
+exp_year = '2026'
+cvv = '971'
+full_card = f"{card_number}|{exp_month}|{exp_year}|{cvv}"
+
+# Chế độ ẩn danh
+chrome_options = webdriver.ChromeOptions().add_argument('--incognito')
+
+def create_acc_au():
+    # Email & Mật khẩu ngẫu nhiên
+    rand_str = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+    email = f"phanhieu_{rand_str}@mailforspam.com"
+    password = 'plmplmplm1'
+    # Khởi tạo phiên
+    session = webdriver.Chrome(chrome_options)
+    # Load trang đăng kí tài khoản
+    session.get("https://connect.auone.jp/net/vw/cca_eu_net/cca?ID=ENET0510")
+    # Đợi trang tải xong
+    WebDriverWait(session, 10).until(EC.presence_of_element_located((By.ID, "wowAliasIdEmail")))
+    # Step 1
+    session.find_element(By.XPATH, '//input[@id="wowAliasIdEmail"]').send_keys(email)
+    session.find_element(By.XPATH, '//button[@class="idk-button-primary idk-margin"]').click()
+    # Step 2
+    WebDriverWait(session, 10).until(EC.presence_of_element_located((By.ID, "confirmcode")))
+    # Mở mailforspam.com lấy code
+    time.sleep(6)
+    session.execute_script(f'window.open("https://mailforspam.com/mail/{email.split("@")[0]}/1","_blank");')
+    session.switch_to.window(session.window_handles[1])
+    mail_content = session.find_element(By.XPATH, '//p[@id="messagebody"]').text
+    code = re.search(r'\b\d{6}\b', mail_content).group()
+    session.close()
+    session.switch_to.window(session.window_handles[0])
+    session.find_element(By.XPATH, '//input[@id="confirmcode"]').send_keys(code)
+    session.find_element(By.XPATH, '//button[@class="idk-button-primary idk-margin"]').click()
+    # Step 3
+    WebDriverWait(session, 10).until(EC.presence_of_element_located((By.ID, "password")))
+    session.find_element(By.XPATH, '//input[@id="password"]').send_keys(password)
+    session.find_element(By.XPATH, '//input[@id="csBirthdayYYYY"]').send_keys(str(random.randint(1980,2000)))
+    dropdown = session.find_element(By.XPATH, '//select[@id="csBirthdayMM" and @name="csBirthdayMM"]')
+    dropdown.find_element(By.XPATH, '//option[@value="{}"]'.format(str(random.randint(1,12)).zfill(2))).click()
+    session.find_element(By.XPATH, '//input[@id="csBirthdayDD"]').send_keys(str(random.randint(10,28)))
+    session.find_element(By.XPATH, '//label[@class="idk-text-16-bold-no-lh radio-gender" and @data-bind="d_eMail1"]').click()
+    session.find_element(By.XPATH, '//button[@name="btn_cmp" and @id="btn_cmp"]').click()
+    # Điền thông tin tài khoản
+    session.get("https://id.auone.jp/id/userinfo/cinfo_set.html")
+    session.find_element(By.ID, "nameKanji").send_keys("Tan Trieu")
+    session.find_element(By.ID, "nameKana").send_keys("タン チェウ")
+    session.find_element(By.ID, "zip").send_keys("1120000")
+    session.find_element(By.ID, "addr1").send_keys("TrieuDepTrai")
+    session.find_element(By.ID, "tel").send_keys("74747474743")
+    session.find_element(By.XPATH, '//*[@id="cinfo"]/div/a[2]/img').click()
+    session.find_element(By.XPATH, '//*[@id="cinfo"]/div[3]/a[2]/img').click()
+    session.find_element(By.XPATH, '//*[@id="auonePwd"]').send_keys(password)
+    session.find_element(By.XPATH, '//*[@id="btn_pwdLogin"]').click()
+    # Reg GFN Pre thông qua AU health
+    session.get("https://api.wellness.auone.jp/premium/login_entry")
+    session.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", session.find_element(By.XPATH, '/html/body/div/div[1]'))
+    session.find_element(By.XPATH, "/html/body/div/div[2]/div/label").click()
+    session.execute_script("arguments[0].click();", session.find_element(By.ID, "click_go_next"))
+    session.find_element(By.ID, "creditNo").send_keys(card_number)
+    session.find_element(By.ID, "creditEffTimlmtMonth").send_keys(exp_month)
+    session.find_element(By.ID, "creditEffTimlmtYear").send_keys(exp_year)
+    session.find_element(By.ID, "secrtyCd").send_keys(cvv)
+    session.find_element(By.XPATH, '//*[@id="btn_ok"]').click()
+    WebDriverWait(session, 25).until(EC.presence_of_element_located((By.XPATH, '/html/body/div/div/section[1]/div[2]/a[2]')))
+    # Vào trang reg pre
+    session.get("https://my.au.com/rd/gfpentry")
+    session.find_element(By.XPATH, '//*[@id="contentInner"]/div[1]/ul/label/span[2]/input').click()
+    session.find_element(By.XPATH, '//*[@id="contentInner"]/div[2]/button').click()
+    session.find_element(By.XPATH, '//*[@id="contentInner"]/div[1]/button').click()
+    try:
+        session.find_element(By.CSS_SELECTOR, ".btn-primary")
+        print(f'\n{result["email"]} | {result["password"]} | {datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")}')
+        with open("pre.txt", "a") as File:
+            File.write(
+                f'\n{result["email"]} | {result["password"]} | {datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")}'
+            )
+            File.close()
+    except:
+        print(Fore.CYAN, f"{full_card} \n>>> CARD LIVE ADD", Style.RESET_ALL)
+    session.quit()
+
+# Main
+try: system("cls")
+except: system("clear")
+print(Fore.RED,    " ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓\n",
+      Fore.YELLOW, "┃                  TOOL TẠO TÀI KHOẢN AU                   ┃\n",
+      Fore.GREEN,  "┃               Phát triển bởi: TrieuDepTrai               ┃\n",
+      Fore.CYAN,   "┃       Facebook: https://facebook.com/trieu.h.l.m.t/      ┃\n",
+      Fore.BLUE,   "┃                  Họ & tên: Bùi Tấn Triệu                 ┃\n",
+      Fore.MAGENTA,"┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n",
+      Style.RESET_ALL, "\n")
+
+acc_quantity = int(input("Nhập số lượng acc cần tạo: "))
+for i in range(acc_quantity):
+    print(Fore.RED, f"\n>>> Đang tạo tài khoản thứ {i + 1}", Style.RESET_ALL)
+    result = create_acc_au()
